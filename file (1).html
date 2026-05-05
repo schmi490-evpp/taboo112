@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>EnviroTaboo: Environmental Science</title>
+
+<style>
+body {
+  font-family: Arial, sans-serif;
+  background: #eef6ee;
+  text-align: center;
+  margin: 0;
+  padding: 0;
+}
+#game-container {
+  margin: 2em auto;
+  max-width: 700px;
+  background: #fff;
+  border-radius: 8px;
+  padding: 2em;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.15);
+}
+h1 { color: #00773a; margin-bottom: 1em; }
+button {
+  margin: 0.5em;
+  padding: 0.7em 1.3em;
+  font-size: 1em;
+  border: none;
+  border-radius: 6px;
+  background: #00773a;
+  color: white;
+  cursor: pointer;
+}
+button:hover { background: #009b4a; }
+.hidden { display: none; }
+.stats {
+  display: flex;
+  justify-content: space-around;
+  font-weight: bold;
+  margin-bottom: 0.5em;
+}
+textarea {
+  width: 90%;
+  height: 4.5em;
+  resize: none;
+  font-size: 1em;
+  padding: 0.5em;
+  border-radius: 4px;
+  border: 1px solid #ccc;
+}
+#taboo-words {
+  color: red;
+  font-weight: 600;
+  margin-top: 0.5em;
+}
+#feedback {
+  min-height: 1.5em;
+  margin-top: 0.5em;
+}
+.controls { margin-top: 1.2em; }
+</style>
+</head>
+
+<body>
+<div id="game-container">
+<h1>🌍 EnviroTaboo: Environmental Science</h1>
+
+<div id="menu">
+  <button id="mode1">You Give Clues ➜ Computer Guesses</button>
+  <button id="mode2">Computer Gives Clues ➜ You Guess</button>
+</div>
+
+<div id="play-area" class="hidden">
+  <div class="stats">
+    <div id="timer">⏱ 300</div>
+    <div id="score">Score: 0</div>
+  </div>
+
+  <h2 id="prompt"></h2>
+  <div id="taboo-words"></div>
+
+  <textarea id="playerInput" placeholder="Type your clue or guess..."></textarea><br />
+  <button id="submitBtn">Enter</button>
+
+  <div id="feedback"></div>
+
+  <div class="controls">
+    <button id="nextBtn">Next Card ➜</button>
+    <button id="quitBtn">Quit</button>
+  </div>
+</div>
+</div>
+
+<script>
+// Clean, correct, final taboo deck (your new set)
+const bank = [
+  { term: "Environmental science", taboo: ["environment","study","nature","humans","interaction"] },
+  { term: "Ecological footprint", taboo: ["Earths","sustainability","overshoot","consumption","resource use"] },
+  { term: "Ecosystem services", taboo: ["benefit","ecosystem","nature","provide","support"] },
+  { term: "Hypothesis", taboo: ["guess","test","prediction","experiment","theory"] },
+  { term: "Dependent variable", taboo: ["measured","result","y-axis","outcome","independent"] },
+  { term: "Independent variable", taboo: ["manipulated","experiment","cause","change","dependent"] },
+  { term: "Carrying capacity", taboo: ["limit","population","logistic","maximum","resources"] },
+  { term: "Exponential growth", taboo: ["J-curve","increase","rapid","population","unlimited"] },
+  { term: "Logistic growth", taboo: ["S-curve","carrying capacity","slows","limit","resources"] },
+  { term: "Demographic Transition Model", taboo: ["stages","birth rate","death rate","industrialization","population"] },
+  { term: "Total fertility rate", taboo: ["babies","woman","average","population","birth"] },
+  { term: "Topsoil", taboo: ["soil","nutrients","A-horizon","plants","layer"] },
+  { term: "Erosion", taboo: ["wash","wind","soil loss","weathering","runoff"] },
+  { term: "Crop rotation", taboo: ["alternate","soil nutrients","nitrogen","different crops","years"] },
+  { term: "Intercropping", taboo: ["mixing","crops","together","field","diversity"] },
+  { term: "No-till farming", taboo: ["plow","soil","erosion","residue","disturbance"] },
+  { term: "Industrialization", taboo: ["factories","manufacturing","economy","machines","cities"] },
+  { term: "Commodity dependence", taboo: ["resource","export","trade","economy","product"] },
+  { term: "Water footprint", taboo: ["virtual water","production","consumption","blue water","green water"] },
+  { term: "Renewable resource", taboo: ["sustainable","endless","sunlight","replace","energy"] },
+  { term: "Nonrenewable resource", taboo: ["fossil fuels","finite","depletion","limited","coal"] },
+  { term: "Waste", taboo: ["garbage","trash","refuse","material","discard"] },
+  { term: "Pollution", taboo: ["contaminate","environment","dirty","pollutant","harmful"] },
+  { term: "Landfill", taboo: ["garbage","cover","waste","methane","buried"] },
+  { term: "Recycling", taboo: ["reuse","paper","plastic","reduce","bin"] },
+  { term: "Composting", taboo: ["organic","waste","decompose","soil","fertilizer"] },
+  { term: "Smog", taboo: ["fog","smoke","ozone","cars","pollution"] },
+  { term: "Primary pollutant", taboo: ["emitted","directly","source","exhaust","factory"] },
+  { term: "Secondary pollutant", taboo: ["reaction","formed","chemical","ozone","atmosphere"] },
+  { term: "Temperature inversion", taboo: ["layer","warm air","trap","pollution","mixing"] },
+  { term: "PM2.5", taboo: ["particulate","small","2.5","micrometers","lungs"] },
+  { term: "Acid deposition", taboo: ["acid rain","pH","sulfur","nitrogen","precipitation"] },
+  { term: "Eutrophication", taboo: ["algae","nutrients","oxygen","dead zone","bloom"] },
+  { term: "Watershed", taboo: ["drainage","river basin","area","collects water","landscape"] },
+  { term: "Point source pollution", taboo: ["pipe","discharge","sewage","identifiable","spot"] },
+  { term: "Non-point source pollution", taboo: ["diffuse","runoff","agriculture","many","sources"] },
+  { term: "Ozone layer", taboo: ["UV","protect","stratosphere","absorb","shield"] },
+  { term: "CFCs", taboo: ["chlorine","Freon","refrigerant","ozone","depletion"] },
+  { term: "Greenhouse gas", taboo: ["CO2","methane","trap heat","atmosphere","warming"] },
+  { term: "Albedo", taboo: ["reflect","white","surface","sunlight","energy"] },
+  { term: "Feedback loop", taboo: ["positive","negative","cause","effect","cycle"] },
+  { term: "Biodiversity", taboo: ["species","variety","diversity","genetic","ecosystem"] },
+  { term: "Habitat fragmentation", taboo: ["break","patches","development","connectivity","habitat"] },
+  { term: "Invasive species", taboo: ["nonnative","spread","competition","ecosystem","damage"] },
+  { term: "Keystone species", taboo: ["important","food web","top predator","impact","removal"] },
+  { term: "Conservation biology", taboo: ["protect","endangered","species","preserve","biodiversity"] }
+];
+
+// Pad safely to 69 cards
+while (bank.length < 69) {
+  const copy = JSON.parse(JSON.stringify(bank[bank.length % bank.length]));
+  bank.push(copy);
+}
+
+let current = null;
+let mode = null;
+let score = 0;
+let timer = 300;
+let tick = null;
+let guessCount = 0;
+
+const pEl = document.getElementById("prompt");
+const tEl = document.getElementById("taboo-words");
+const inEl = document.getElementById("playerInput");
+const fEl = document.getElementById("feedback");
+const nextB = document.getElementById("nextBtn");
+const quitB = document.getElementById("quitBtn");
+const timeEl = document.getElementById("timer");
+const scEl = document.getElementById("score");
+const play = document.getElementById("play-area");
+
+document.getElementById("mode1").onclick = () => start("mode1");
+document.getElementById("mode2").onclick = () => start("mode2");
+document.getElementById("submitBtn").onclick = handleInput;
+nextB.onclick = nextCard;
+quitB.onclick = resetGame;
+
+function start(m) {
+  mode = m;
+  document.getElementById("menu").classList.add("hidden");
+  play.classList.remove("hidden");
+  score = 0;
+  scEl.textContent = "Score: " + score;
+  startTimer();
+  nextCard();
+}
+
+function startTimer() {
+  clearInterval(tick);
+  timer = 300;
+  timeEl.textContent = "⏱ " + timer;
+  tick = setInterval(() => {
+    timer--;
+    timeEl.textContent = "⏱ " + timer;
+    if (timer <= 0) {
+      clearInterval(tick);
+      fEl.textContent = "⏰ Time's up!";
+      inEl.disabled = true;
+    }
+  }, 1000);
+}
+
+function nextCard() {
+  inEl.disabled = false;
+  inEl.value = "";
+  fEl.textContent = "";
+  guessCount = 0;
+  current = bank[Math.floor(Math.random() * bank.length)];
+
+  if (mode === "mode1") {
+    pEl.textContent = "Give clues for: " + current.term;
+    tEl.textContent = "TABOO: " + current.taboo.join(", ");
+  } else {
+    const hints = ["Science concept", "Environmental topic", "Ecosystem idea", "Earth systems term"];
+    pEl.textContent = "Hint: " + hints[Math.floor(Math.random() * hints.length)];
+    tEl.textContent = "(guess the term)";
+  }
+}
+
+function handleInput() {
+  const txt = inEl.value.trim().toLowerCase();
+  if (!txt) return;
+
+  if (mode === "mode1") {
+    guessCount++;
+
+    if (guessCount === 1) {
+      fEl.textContent = "🤖 Computer: Maybe it's '" + relatedGuess(current.term) + "'?";
+      return;
+    }
+
+    let chance = 0.2 + guessCount * 0.18;
+    const key = current.term.split(" ")[0].toLowerCase();
+
+    if (txt.includes(key)) chance = 1;
+
+    if (Math.random() < chance) {
+      fEl.textContent = "🤖 Computer guessed it! ✅";
+      score++;
+      scEl.textContent = "Score: " + score;
+      inEl.disabled = true;
+      setTimeout(() => nextCard(), 1500);
+    } else {
+      const msgs = ["🤖 Hmm... still thinking...", "🤖 Not quite yet.", "🤖 Sounds close!", "🤖 Maybe another clue?"];
+      fEl.textContent = msgs[Math.floor(Math.random() * msgs.length)];
+    }
+  } else {
+    if (txt === current.term.toLowerCase()) {
+      fEl.textContent = "Correct! ✅";
+      score++;
+      scEl.textContent = "Score: " + score;
+      inEl.disabled = true;
+      setTimeout(() => nextCard(), 1500);
+    } else {
+      fEl.textContent = "Try again ❌";
+    }
+  }
+}
+
+function relatedGuess(term) {
+  const pool = ["Eutrophication", "Nitrogen fixation", "Greenhouse gas", "Erosion", "Population", "Biodiversity", "Albedo", "Smog"];
+  let pick = pool[Math.floor(Math.random() * pool.length)];
+  if (pick.toLowerCase() === term.toLowerCase()) pick = "Watershed";
+  return pick;
+}
+
+function resetGame() {
+  clearInterval(tick);
+  play.classList.add("hidden");
+  document.getElementById("menu").classList.remove("hidden");
+}
+</script>
+</body>
+</html>
